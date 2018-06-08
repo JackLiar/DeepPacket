@@ -7,5 +7,5 @@ int main(int argc, char* argv[]) {
   if (argc > 0) {
   }
   char* errbuf = malloc(ERROR_BUF_SIZE * sizeof(char));
-  extract_ip_pkt("./test.pcap", errbuf);
+  extract_nl_pkt("./test.pcap", errbuf);
 }

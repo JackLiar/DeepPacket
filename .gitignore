@@ -2,6 +2,7 @@
 .python-version
 .DS_Store
 *.pcap
+data/
 
 # C.gitignore
 
