@@ -102,16 +102,26 @@ int write_pkt_2_csv(const char* fname, const uint8_t* dpkt, int id) {
 
 pcap_stat_offline_t extract_nl_pkt(const char* pcap_fname,
                                    const char* csv_fname, char* errbuf) {
+  pcap_stat_offline_t stat_info = {0};
+  FILE* fp = fopen(pcap_fname, "r");
+  if (!fp) {
+    strcpy(errbuf, "pcap file not exists!");
+    return stat_info;
+  }
+  fclose(fp);
+
+  fp = fopen(csv_fname, "r");
+  if (fp) {
+    remove(csv_fname);
+  }
+
   pcap_t* descr = pcap_open_offline(pcap_fname, errbuf);
   struct pcap_pkthdr* hdr;
   const uint8_t* pkt_data;
   int res;
-  pcap_stat_offline_t stat_info = {0};
   uint16_t nl_protocol; /* network layer protocol */
   uint8_t tl_protocol;  /* transport layer protocol */
   ip_pkt_t ip_pkt = {0, {0}};
-
-  remove(csv_fname);
 
   printf("Start processing pcap file: %s.\n", pcap_fname);
 

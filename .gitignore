@@ -4,6 +4,7 @@
 *.pcap
 data/
 tensorflow-pyenv/
+*.tar.gz
 
 # C.gitignore
 
