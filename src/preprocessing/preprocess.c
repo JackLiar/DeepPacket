@@ -15,7 +15,7 @@ Args:
   uint8_t* dpkt: deep packet buffer, all zeros(guarented by calling function);
   int min: min of 1500 and packet captured length
 */
-void extract_upd_pkt(const uint8_t* pkt_data, uint8_t* dpkt, int min) {
+void extract_udp_pkt(const uint8_t* pkt_data, uint8_t* dpkt, int min) {
   uint8_t pad_buf[12] = {0};
   // copy ipv4 header and upd header
   memcpy(dpkt, pkt_data + ETHERNET_2_HEAD_LEN, IPV4_HEAD_LEN + UDP_HEAD_LEN);
@@ -36,20 +36,30 @@ Args:
   pcap_stat_offline_t* stat_info: pcap file stat info
   uint8_t protocol: used to determine extract tcp or udp
 */
-ip_pkt_t extract_ipv4_pkt(const struct pcap_pkthdr* hdr,
-                          const uint8_t* pkt_data,
-                          pcap_stat_offline_t* stat_info, uint8_t protocol) {
-  ip_pkt_t ip_pkt = {0, {0}};
+int extract_ipv4_pkt(const struct pcap_pkthdr* hdr, const uint8_t* pkt_data,
+                     pcap_stat_offline_t* stat_info, ip_pkt_t* ip_pkt,
+                     uint8_t protocol) {
+  (*ip_pkt).id = 0;
+  memset((*ip_pkt).raw, 0, DEEP_PACKET_LEN);
   int min = fmin(hdr->caplen, DEEP_PACKET_LEN);
 
   if (protocol == TCP_PROTOCOL) {
     (*stat_info).tcp_pkt_num++;
-    memcpy(ip_pkt.raw, pkt_data + ETHERNET_2_HEAD_LEN, min);
+#ifdef NO_EMPTY_PAYLOAD
+    uint8_t tcp_header_len =
+        4 * (*(pkt_data + ETHERNET_2_HEAD_LEN + IPV4_HEAD_LEN + 12) >> 4);
+    uint8_t all_header_len =
+        ETHERNET_2_HEAD_LEN + IPV4_HEAD_LEN + tcp_header_len;
+    if ((hdr->caplen - all_header_len) == 0) {
+      return 0;
+    }
+#endif
+    memcpy((*ip_pkt).raw, pkt_data + ETHERNET_2_HEAD_LEN, min);
   } else if (protocol == UDP_PROTOCOL) {
     (*stat_info).udp_pkt_num++;
-    extract_upd_pkt(pkt_data, ip_pkt.raw, min);
+    extract_udp_pkt(pkt_data, (*ip_pkt).raw, min);
   }
-  return ip_pkt;
+  return 1;
 }
 
 /*
@@ -101,11 +111,7 @@ pcap_stat_offline_t extract_nl_pkt(const char* pcap_fname,
   uint8_t tl_protocol;  /* transport layer protocol */
   ip_pkt_t ip_pkt = {0, {0}};
 
-  int rc = remove(csv_fname);
-  if (rc) {
-    perror("remove csv file");
-    return stat_info;
-  }
+  remove(csv_fname);
 
   printf("Start processing pcap file: %s.\n", pcap_fname);
 
@@ -114,11 +120,17 @@ pcap_stat_offline_t extract_nl_pkt(const char* pcap_fname,
     nl_protocol = htons(*(uint16_t*)(pkt_data + 12));
     tl_protocol = pkt_data[ETHERNET_2_HEAD_LEN + 9];
     if (nl_protocol == IPV4_PROTOCOL) {
+      stat_info.ip_pkt_num++;
       if (tl_protocol == TCP_PROTOCOL || tl_protocol == UDP_PROTOCOL) {
-        ip_pkt = extract_ipv4_pkt(hdr, pkt_data, &stat_info, tl_protocol);
+        int valid =
+            extract_ipv4_pkt(hdr, pkt_data, &stat_info, &ip_pkt, tl_protocol);
+#ifdef NO_EMPTY_PAYLOAD
+        if (!valid) {
+          continue;
+        }
+#endif
         write_pkt_2_csv(csv_fname, ip_pkt.raw, stat_info.pkt_num);
       }
-      stat_info.ip_pkt_num++;
     }
     continue;
   }
