@@ -100,6 +100,12 @@ int write_pkt_2_csv(const char* fname, const uint8_t* dpkt, int id) {
 
 /* Public functions */
 
+void print_stat_info(pcap_stat_offline_t stat_info) {
+  printf("\nThere are %u ip packets in pcap file.", stat_info.ip_pkt_num);
+  printf("\nThere are %u udp packets in pcap file.", stat_info.udp_pkt_num);
+  printf("\nThere are %u tcp packets in pcap file.\n", stat_info.tcp_pkt_num);
+}
+
 pcap_stat_offline_t extract_nl_pkt(const char* pcap_fname,
                                    const char* csv_fname, char* errbuf) {
   pcap_stat_offline_t stat_info = {0};
@@ -111,9 +117,6 @@ pcap_stat_offline_t extract_nl_pkt(const char* pcap_fname,
   fclose(fp);
 
   fp = fopen(csv_fname, "r");
-  if (fp) {
-    remove(csv_fname);
-  }
 
   pcap_t* descr = pcap_open_offline(pcap_fname, errbuf);
   struct pcap_pkthdr* hdr;
@@ -148,13 +151,8 @@ pcap_stat_offline_t extract_nl_pkt(const char* pcap_fname,
     printf("\nAn error occured while reading pcap file: %s.\n", pcap_fname);
     printf("Error info: %s.\n", pcap_geterr(descr));
   }
-  printf("\nEnd processing pcap file: %s.", pcap_fname);
+  printf("End processing pcap file: %s.\n", pcap_fname);
+  print_stat_info(stat_info);
 
   return stat_info;
-}
-
-void print_stat_info(pcap_stat_offline_t stat_info) {
-  printf("\nThere are %u ip packets in pcap file.", stat_info.ip_pkt_num);
-  printf("\nThere are %u udp packets in pcap file.", stat_info.udp_pkt_num);
-  printf("\nThere are %u tcp packets in pcap file.\n", stat_info.tcp_pkt_num);
 }
