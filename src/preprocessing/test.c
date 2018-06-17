@@ -7,8 +7,8 @@ int main(int argc, char* argv[]) {
   if (argc > 0) {
   }
   char* errbuf = (char*)malloc(ERROR_BUF_SIZE * sizeof(char));
-  pcap_stat_offline_t stat_info =
-      extract_nl_pkt("../../data/samples/scpDown5.pcap",
-                     "../../data/samples/scpDown5.csv", errbuf);
-  print_stat_info(stat_info);
+  pcap_stat_t stat_info =
+      extract_pkt("../../data/samples/youtube2.pcap",
+                  "../../data/samples/youtube2.csv", TCP_PROTOCOL, errbuf);
+  print_stat_info(stat_info, TCP_PROTOCOL);
 }

@@ -20,6 +20,9 @@
 #define TCP_PROTOCOL 0x06
 #define UDP_PROTOCOL 0x11
 
+#define LINKTYPE_ETHERNET 0x0001
+#define LINKTYPE_RAW 0x0065
+
 /*
 stat info of a savefile
 
@@ -31,32 +34,41 @@ typedef struct pcap_stat_offline {
   uint32_t ip_pkt_num;
   uint32_t tcp_pkt_num;
   uint32_t udp_pkt_num;
-} pcap_stat_offline_t;
+} pcap_stat_t;
 
 /*
-ip (modifiled) packet struct
+target packet data
+
+there's gonna be 2 modes:
+  1. whole network layer packet(ip packet)
+  2. just transport layer packet payload (tcp/udp)
+
+Since the src ip and dst ip are limited to several values in the example pcap
+files, so ip address and ip header may be useless in machine learning.
 */
-typedef struct ip_packet {
+typedef struct packet {
   int id;                       /* frame id in the pcap file */
   uint8_t raw[DEEP_PACKET_LEN]; /* ip packet raw data */
-} ip_pkt_t;
+} packet_t;
 
 /*
-process a pcap file to extract all the ip packets
+process a pcap file to extract all the packets
 
 Args:
-  const char* fname: pcap file name;
+  const char* pcap_fname: pcap file name;
+  const char* csv_fname: pcap file name;
+  int protocol: which transport layer protocol(tcp/udp) to be extracted;
   char* errbuf: buffer to store error message
 */
-struct pcap_stat_offline extract_nl_pkt(const char* pcap_fname,
-                                        const char* csv_fname, char* errbuf);
+pcap_stat_t extract_pkt(const char* pcap_fname, const char* csv_fname,
+                        int protocol, char* errbuf);
 
 /*
 print stat information of a pcap file
 
 Args:
-  pcap_stat_offline_t stat_info: stat information of a pcap file
+  pcap_statt stat_info: stat information of a pcap file
 */
-void print_stat_info(pcap_stat_offline_t stat_info);
+void print_stat_info(pcap_stat_t stat_info, int protocol);
 
 #endif

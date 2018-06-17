@@ -6,6 +6,7 @@ import pathlib
 import platform
 
 lib_prep = ctypes.CDLL("./libpreprocess.so")
+protocol_dict = {"tcp": 6, "udp": 17}
 
 
 def process_pcap(pcap_fname: str, csv_fname: str):
@@ -24,7 +25,7 @@ if __name__ == "__main__":
         "Documents/Codes/Github/DeepPacket/data/samples/")
   elif platform.system() == "Linux":
     data_path = os.path.join(
-        str(pathlib.Path.home()), "/code/DeepPacket/data/samples/")
+        str(pathlib.Path.home()), "code/DeepPacket/data/samples/")
 
   for file in os.listdir(data_path):
     if file.endswith(".pcap") or file.endswith(".pcapng"):
