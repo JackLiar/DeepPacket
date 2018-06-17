@@ -11,9 +11,9 @@
 extract udp packet and add padding after udp header
 
 Args:
+  const struct pcap_pkthdr* pkthdr: packet info;
   const u_char* pdt_data: packet actual bytes;
-  uint8_t* dpkt: deep packet buffer, all zeros(guarented by calling function);
-  packet_t pkt: struct restore the target data
+  packet_t* pkt: struct restore the target data
 */
 int extract_tcp_pkt(const struct pcap_pkthdr* hdr, const uint8_t* pkt_data,
                     packet_t* pkt) {
@@ -40,7 +40,7 @@ extract udp packet and add padding after udp header
 Args:
   const struct pcap_pkthdr* pkthdr: packet info;
   const u_char* pdt_data: packet actual bytes;
-  packet_t pkt: struct restore the target data
+  packet_t* pkt: struct restore the target data
 */
 int extract_udp_pkt(const struct pcap_pkthdr* hdr, const uint8_t* pkt_data,
                     packet_t* pkt) {
@@ -70,6 +70,7 @@ Args:
   const struct pcap_pkthdr* pkthdr: packet info;
   const u_char* pdt_data: packet actual bytes;
   pcap_stat_t* stat_info: pcap file stat info;
+  packet_t* pkt: struct restore the target data;
   int protocol: used to determine extract tcp or udp
 */
 int extract_ipv4_pkt(const struct pcap_pkthdr* hdr, const uint8_t* pkt_data,
@@ -83,6 +84,8 @@ int extract_ipv4_pkt(const struct pcap_pkthdr* hdr, const uint8_t* pkt_data,
   } else if (protocol == UDP_PROTOCOL && tl_protocol == UDP_PROTOCOL) {
     (*stat_info).udp_pkt_num++;
     res = extract_udp_pkt(hdr, pkt_data, pkt);
+  } else {
+    return 1;
   }
   return res;
 }
@@ -93,7 +96,9 @@ extract packet from a Ethernet II protocol packet
 Args:
   const struct pcap_pkthdr* pkthdr: packet info;
   const u_char* pdt_data: packet actual bytes;
-  pcap_stat_t* stat_info: pcap file stat info
+  pcap_stat_t* stat_info: pcap file stat info;
+  packet_t* pkt: struct restore the target data;
+  int protocol: used to determine extract tcp or udp
 */
 int extract_eth_pkt(const struct pcap_pkthdr* hdr, const uint8_t* pkt_data,
                     pcap_stat_t* stat_info, packet_t* pkt, int protocol) {

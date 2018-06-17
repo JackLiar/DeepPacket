@@ -29,11 +29,9 @@ def process_pcap(pcap_fname: str, csv_fname: str, protocol: int):
 if __name__ == "__main__":
   if platform.system() == "Darwin":
     data_path = os.path.join(
-        str(pathlib.Path.home()),
-        "Documents/Codes/Github/DeepPacket/data/samples/")
+        str(pathlib.Path.home()), "Documents/Codes/Github/DeepPacket/data/")
   elif platform.system() == "Linux":
-    data_path = os.path.join(
-        str(pathlib.Path.home()), "code/DeepPacket/data/samples/")
+    data_path = os.path.join(str(pathlib.Path.home()), "code/DeepPacket/data/")
 
   for file in os.listdir(data_path):
     if file.endswith(".pcap") or file.endswith(".pcapng"):

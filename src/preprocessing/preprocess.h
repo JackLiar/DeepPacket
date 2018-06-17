@@ -72,7 +72,8 @@ pcap_stat_t extract_pkt(const char* pcap_fname, const char* csv_fname,
 print stat information of a pcap file
 
 Args:
-  pcap_statt stat_info: stat information of a pcap file
+  pcap_stat_t stat_info: stat information of a pcap file;
+  int protocol: transport protocol to be extracted
 */
 void print_stat_info(pcap_stat_t stat_info, int protocol);
 
