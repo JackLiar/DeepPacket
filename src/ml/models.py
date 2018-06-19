@@ -1,4 +1,3 @@
-# source code from https://github.com/YuriBogdanov/DeepPacket
 import torch
 from torch import nn
 
@@ -75,7 +74,7 @@ class AutoEncoder(nn.Module):
         nn.Linear(output_size, input_size), nn.ReLU(True))
 
     self.criterion = nn.MSELoss()
-    self.optimizer = torch.optim.Adam(self.parameters(), lr=0.1)
+    self.optimizer = torch.optim.Adam(self.parameters())
 
   def forward(self, x):
     '''
@@ -86,7 +85,7 @@ class AutoEncoder(nn.Module):
 
     if self.training:
       x_reconstruct = self.backward_pass(y)
-      loss = self.criterion(x_reconstruct, x.data)
+      loss = self.criterion(x_reconstruct, x)
       self.optimizer.zero_grad()
       loss.backward()
       self.optimizer.step()
@@ -99,16 +98,16 @@ class AutoEncoder(nn.Module):
 
 class StackedAutoEncoder(nn.Module):
 
-  def __init__(self, n_classes):
+  def __init__(self):
     super(StackedAutoEncoder, self).__init__()
 
-    self.ae1 = AutoEncoder(1500, 400)
-    self.ae2 = AutoEncoder(400, 300)
-    self.ae3 = AutoEncoder(300, 200)
-    self.ae4 = AutoEncoder(200, 100)
-    self.ae5 = AutoEncoder(100, 50)
-    self.fc_out = nn.Linear(50, n_classes)
-    self.lsm = nn.LogSoftmax(dim=0)
+    self.ae1 = AutoEncoder(1500, 512)
+    self.ae2 = AutoEncoder(512, 256)
+    self.ae3 = AutoEncoder(256, 128)
+    self.ae4 = AutoEncoder(128, 64)
+    self.ae5 = AutoEncoder(64, 32)
+
+    self.lsm = nn.LogSoftmax(dim=1)
 
   def forward(self, x):
     a1 = self.ae1(x)
@@ -117,9 +116,9 @@ class StackedAutoEncoder(nn.Module):
     a4 = self.ae4(a3)
     a5 = self.ae5(a4)
 
-    y = self.fc_out(a5)
+    # softmax classifier
+    y = self.lsm(a5)
 
-    y = self.lsm(y)
     if self.training:
       return y
     else:

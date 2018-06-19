@@ -7,7 +7,12 @@ import platform
 
 lib_prep = ctypes.CDLL("./libpreprocess.so")
 protocol_dict = {"tcp": 6, "udp": 17}
-app_protocol_dict = {"youtube": "tcp", "tor": "tcp", "facebook_audio": "udp"}
+app_protocol_dict = {
+    "youtube": "tcp",
+    "tor": "tcp",
+    "facebook_audio": "udp",
+    "hangouts_audio": "udp"
+}
 
 
 def get_protocol(pcap_fname: str):
@@ -28,13 +33,21 @@ def process_pcap(pcap_fname: str, csv_fname: str, protocol: int):
 
 if __name__ == "__main__":
   if platform.system() == "Darwin":
-    data_path = os.path.join(
-        str(pathlib.Path.home()), "Documents/Codes/Github/DeepPacket/data/")
+    data_path = os.path.expanduser("~/Documents/Codes/Github/DeepPacket/data/")
   elif platform.system() == "Linux":
-    data_path = os.path.join(str(pathlib.Path.home()), "code/DeepPacket/data/")
+    data_path = os.path.expanduser("~/code/DeepPacket/data/")
 
-  for file in os.listdir(data_path):
+  train_data_path = os.path.join(data_path, "train")
+  test_data_path = os.path.join(data_path, "test")
+
+  for file in os.listdir(train_data_path):
     if file.endswith(".pcap") or file.endswith(".pcapng"):
-      pcap_fname = os.path.join(data_path, file)
-      csv_fname = os.path.join(data_path, file.split('.')[0] + ".csv")
+      pcap_fname = os.path.join(train_data_path, file)
+      csv_fname = os.path.join(train_data_path, file.split('.')[0] + ".csv")
+      process_pcap(pcap_fname, csv_fname, get_protocol(pcap_fname))
+
+  for file in os.listdir(test_data_path):
+    if file.endswith(".pcap") or file.endswith(".pcapng"):
+      pcap_fname = os.path.join(test_data_path, file)
+      csv_fname = os.path.join(test_data_path, file.split('.')[0] + ".csv")
       process_pcap(pcap_fname, csv_fname, get_protocol(pcap_fname))
