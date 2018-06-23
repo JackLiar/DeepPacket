@@ -19,18 +19,21 @@ int extract_tcp_pkt(const struct pcap_pkthdr* hdr, const uint8_t* pkt_data,
                     packet_t* pkt) {
   int min = fmin(hdr->caplen, DEEP_PACKET_LEN);
 #ifdef NO_EMPTY_PAYLOAD
-  uint8_t tcp_header_len =
-      4 * (*(pkt_data + ETHERNET_2_HEAD_LEN + IPV4_HEAD_LEN + 12) >> 4);
+  uint8_t tcp_header_len = 4 * (*(pkt_data + IPV4_HEAD_LEN + 12) >> 4);
   uint8_t all_header_len = ETHERNET_2_HEAD_LEN + IPV4_HEAD_LEN + tcp_header_len;
   if ((hdr->caplen - all_header_len) == 0) {
     return 1;
   }
 #endif
 #ifdef ONLY_TRANSPORT_LAYER
-  memcpy((*pkt).raw, pkt_data + ETHERNET_2_HEAD_LEN + IPV4_HEAD_LEN, min);
+  memcpy((*pkt).raw, pkt_data + IPV4_HEAD_LEN, min);
 #else
-  memcpy((*pkt).raw, pkt_data + ETHERNET_2_HEAD_LEN, min);
+  memcpy((*pkt).raw, pkt_data, min);
 #endif
+  for (int i = 0; i < min; i++) {
+    printf("%x ", (*pkt).raw[i]);
+  }
+  printf("\n");
   return 0;
 }
 
@@ -47,19 +50,31 @@ int extract_udp_pkt(const struct pcap_pkthdr* hdr, const uint8_t* pkt_data,
   int min = fmin(hdr->caplen, DEEP_PACKET_LEN);
 
   uint8_t pad_buf[12] = {0};
-#ifndef ONLY_TRANSPORT_LAYER
-  // copy ipv4 header
-  memcpy((*pkt).raw, pkt_data + ETHERNET_2_HEAD_LEN, IPV4_HEAD_LEN);
-#endif
+#ifdef ONLY_TRANSPORT_LAYER
   // copy upd header
-  memcpy((*pkt).raw, pkt_data + ETHERNET_2_HEAD_LEN + IPV4_HEAD_LEN,
-         UDP_HEAD_LEN);
+  memcpy((*pkt).raw, pkt_data + IPV4_HEAD_LEN, UDP_HEAD_LEN);
+  // add padding zeros
+  memcpy((*pkt).raw + UDP_HEAD_LEN, pad_buf, 12);
+  // copy udp payload
+  memcpy((*pkt).raw + UDP_HEAD_LEN + 12,
+         pkt_data + IPV4_HEAD_LEN + UDP_HEAD_LEN,
+         min - (IPV4_HEAD_LEN + UDP_HEAD_LEN + 12));
+#else
+  // copy ipv4 header
+  memcpy((*pkt).raw, pkt_data, IPV4_HEAD_LEN);
+  // copy upd header
+  memcpy((*pkt).raw + IPV4_HEAD_LEN, pkt_data + IPV4_HEAD_LEN, UDP_HEAD_LEN);
   // add padding zeros
   memcpy((*pkt).raw + IPV4_HEAD_LEN + UDP_HEAD_LEN, pad_buf, 12);
   // copy udp payload
   memcpy((*pkt).raw + IPV4_HEAD_LEN + UDP_HEAD_LEN + 12,
-         pkt_data + ETHERNET_2_HEAD_LEN + IPV4_HEAD_LEN + UDP_HEAD_LEN,
+         pkt_data + IPV4_HEAD_LEN + UDP_HEAD_LEN,
          min - (IPV4_HEAD_LEN + UDP_HEAD_LEN + 12));
+#endif
+  for (int i = 0; i < min; i++) {
+    printf("%x ", (*pkt).raw[i]);
+  }
+  printf("\n");
   return 0;
 }
 
@@ -75,7 +90,7 @@ Args:
 */
 int extract_ipv4_pkt(const struct pcap_pkthdr* hdr, const uint8_t* pkt_data,
                      pcap_stat_t* stat_info, packet_t* pkt, int protocol) {
-  uint8_t tl_protocol = pkt_data[ETHERNET_2_HEAD_LEN + 9];
+  uint8_t tl_protocol = pkt_data[9];
   int res;
 
   if (protocol == TCP_PROTOCOL && tl_protocol == TCP_PROTOCOL) {
@@ -107,7 +122,8 @@ int extract_eth_pkt(const struct pcap_pkthdr* hdr, const uint8_t* pkt_data,
   int res;
   if (nl_protocol == IPV4_PROTOCOL) {
     (*stat_info).ip_pkt_num++;
-    res = extract_ipv4_pkt(hdr, pkt_data, stat_info, pkt, protocol);
+    res = extract_ipv4_pkt(hdr, pkt_data + ETHERNET_2_HEAD_LEN, stat_info, pkt,
+                           protocol);
     return res;
   }
   return 0;
@@ -191,11 +207,18 @@ pcap_stat_t extract_pkt(const char* pcap_fname, const char* csv_fname,
       res = extract_eth_pkt(hdr, pkt_data, &stat_info, &packet, protocol);
     }
     if (link_type == LINKTYPE_RAW) {
-      res = extract_ipv4_pkt(hdr, pkt_data, &stat_info, &packet, protocol);
+      stat_info.ip_pkt_num++;
+      uint8_t version = pkt_data[0] >> 4;
+      if (version == 4) {
+        res = extract_ipv4_pkt(hdr, pkt_data, &stat_info, &packet, protocol);
+      }
     }
     if (res == 0) {
       packet.id = stat_info.pkt_num;
       write_pkt_2_csv(csv_fname, packet);
+    }
+    if (stat_info.tcp_pkt_num == 1 || stat_info.udp_pkt_num == 1) {
+      break;
     }
   }
   print_stat_info(stat_info, protocol);

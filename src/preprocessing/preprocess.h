@@ -26,7 +26,7 @@
 #define UDP_PROTOCOL 0x11
 
 #define LINKTYPE_ETHERNET 0x0001
-#define LINKTYPE_RAW 0x0065
+#define LINKTYPE_RAW 0x000c
 
 /*
 stat info of a savefile
