@@ -11,12 +11,6 @@
 #define TCP_HEAD_LEN 20
 #define UDP_HEAD_LEN 8
 
-#ifdef ONLY_TRANSPORT_LAYER
-#define DEEP_PACKET_LEN 1000
-#else
-#define DEEP_PACKET_LEN 1500
-#endif
-
 // 8(id) + 1500*3(byte value) + 1500(comma) + 1("\n" in the end)
 #define CSV_ROW_BUF_LEN 6009
 
@@ -27,6 +21,13 @@
 
 #define LINKTYPE_ETHERNET 0x0001
 #define LINKTYPE_RAW 0x000c
+
+#define NO_EMPTY_PAYLOAD
+#ifdef ONLY_TRANSPORT_LAYER
+#define DEEP_PACKET_LEN 1000
+#else
+#define DEEP_PACKET_LEN 1500
+#endif
 
 /*
 stat info of a savefile

@@ -17,7 +17,7 @@ Args:
 */
 int extract_tcp_pkt(const struct pcap_pkthdr* hdr, const uint8_t* pkt_data,
                     packet_t* pkt) {
-  int min = fmin(hdr->caplen, DEEP_PACKET_LEN);
+  int min = fmin(hdr->caplen - ETHERNET_2_HEAD_LEN, DEEP_PACKET_LEN);
 #ifdef NO_EMPTY_PAYLOAD
   uint8_t tcp_header_len = 4 * (*(pkt_data + IPV4_HEAD_LEN + 12) >> 4);
   uint8_t all_header_len = ETHERNET_2_HEAD_LEN + IPV4_HEAD_LEN + tcp_header_len;
@@ -30,10 +30,6 @@ int extract_tcp_pkt(const struct pcap_pkthdr* hdr, const uint8_t* pkt_data,
 #else
   memcpy((*pkt).raw, pkt_data, min);
 #endif
-  for (int i = 0; i < min; i++) {
-    printf("%x ", (*pkt).raw[i]);
-  }
-  printf("\n");
   return 0;
 }
 
@@ -47,10 +43,10 @@ Args:
 */
 int extract_udp_pkt(const struct pcap_pkthdr* hdr, const uint8_t* pkt_data,
                     packet_t* pkt) {
-  int min = fmin(hdr->caplen, DEEP_PACKET_LEN);
-
   uint8_t pad_buf[12] = {0};
 #ifdef ONLY_TRANSPORT_LAYER
+  int min = fmin(hdr->caplen - ETHERNET_2_HEAD_LEN - IPV4_HEAD_LEN + 12,
+                 DEEP_PACKET_LEN);
   // copy upd header
   memcpy((*pkt).raw, pkt_data + IPV4_HEAD_LEN, UDP_HEAD_LEN);
   // add padding zeros
@@ -60,6 +56,7 @@ int extract_udp_pkt(const struct pcap_pkthdr* hdr, const uint8_t* pkt_data,
          pkt_data + IPV4_HEAD_LEN + UDP_HEAD_LEN,
          min - (IPV4_HEAD_LEN + UDP_HEAD_LEN + 12));
 #else
+  int min = fmin(hdr->caplen - ETHERNET_2_HEAD_LEN + 12, DEEP_PACKET_LEN);
   // copy ipv4 header
   memcpy((*pkt).raw, pkt_data, IPV4_HEAD_LEN);
   // copy upd header
@@ -71,10 +68,6 @@ int extract_udp_pkt(const struct pcap_pkthdr* hdr, const uint8_t* pkt_data,
          pkt_data + IPV4_HEAD_LEN + UDP_HEAD_LEN,
          min - (IPV4_HEAD_LEN + UDP_HEAD_LEN + 12));
 #endif
-  for (int i = 0; i < min; i++) {
-    printf("%x ", (*pkt).raw[i]);
-  }
-  printf("\n");
   return 0;
 }
 
@@ -201,6 +194,7 @@ pcap_stat_t extract_pkt(const char* pcap_fname, const char* csv_fname,
   printf("Start processing pcap file: %s.\n", pcap_fname);
 
   while ((res = pcap_next_ex(descr, &hdr, &pkt_data)) == 1) {
+    memset(packet.raw, 0, DEEP_PACKET_LEN);
     stat_info.pkt_num++;
     int link_type = pcap_datalink(descr);
     if (link_type == LINKTYPE_ETHERNET) {
@@ -217,7 +211,7 @@ pcap_stat_t extract_pkt(const char* pcap_fname, const char* csv_fname,
       packet.id = stat_info.pkt_num;
       write_pkt_2_csv(csv_fname, packet);
     }
-    if (stat_info.tcp_pkt_num == 1 || stat_info.udp_pkt_num == 1) {
+    if (stat_info.tcp_pkt_num == 10000 || stat_info.udp_pkt_num == 10000) {
       break;
     }
   }
